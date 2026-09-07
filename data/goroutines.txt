@@ -1,0 +1,29 @@
+Goroutines
+
+A goroutine is a lightweight thread of execution managed by the Go runtime rather than
+by the operating system. You start one by putting the keyword "go" in front of a function
+call, for example "go doWork()". The call returns immediately and doWork runs concurrently
+with the code that started it.
+
+Goroutines are cheap. A goroutine starts with a small stack, only a few kilobytes, that
+grows and shrinks as needed, so a Go program can run many thousands of goroutines at once.
+The Go runtime multiplexes these goroutines onto a smaller number of operating system
+threads. When one goroutine blocks, for example while waiting on input, the runtime moves
+another runnable goroutine onto the thread, so the program keeps making progress.
+
+The main function itself runs in a goroutine, called the main goroutine. When the main
+goroutine returns, the program exits, even if other goroutines are still running. Because
+of this, starting a goroutine and immediately reaching the end of main often means the
+goroutine never gets a chance to run.
+
+Goroutines run concurrently and share memory, so two goroutines touching the same variable
+at the same time can cause a data race. The Go philosophy is "do not communicate by sharing
+memory; instead, share memory by communicating." In practice that means using channels to
+pass values between goroutines, which coordinates them safely, rather than protecting shared
+variables with locks wherever possible.
+
+A channel is a typed conduit created with make, for example "ch := make(chan int)". One
+goroutine sends a value with "ch <- 42" and another receives it with "v := <-ch". By default
+a send blocks until another goroutine is ready to receive, which naturally synchronizes the
+two. The sync package, with types like WaitGroup and Mutex, covers cases where channels are
+not the right fit, such as waiting for a group of goroutines to finish.

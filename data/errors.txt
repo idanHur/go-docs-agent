@@ -1,0 +1,30 @@
+Errors
+
+Go does not use exceptions for ordinary failures. Instead, functions that can fail return an
+error as their last return value. The caller checks it. The classic pattern is:
+
+    result, err := doSomething()
+    if err != nil {
+        return err
+    }
+
+error is a built-in interface with a single method, "Error() string", which returns a
+human-readable description. Any type with that method satisfies the interface, so you can
+define your own error types when you need to carry extra information, but most of the time
+you use the helpers in the standard library.
+
+To create a simple error, use errors.New("something went wrong") or, when you want to include
+values, fmt.Errorf("could not open %s: %v", name, err). A nil error means success, so
+returning nil for the error is how a function signals that everything worked.
+
+Errors are often wrapped as they travel up the call stack, so each layer adds context while
+preserving the original. fmt.Errorf supports this with the %w verb, for example
+fmt.Errorf("loading config: %w", err). The wrapped error can then be inspected later.
+errors.Is reports whether an error, or anything it wraps, matches a specific sentinel error
+such as io.EOF. errors.As checks whether anything in the chain is of a particular error type
+and, if so, extracts it so you can read its fields.
+
+Panic and recover exist for truly exceptional situations, such as programmer mistakes, not
+for normal error handling. A panic unwinds the stack and crashes the program unless a
+deferred call uses recover to stop it. Idiomatic Go reserves panic for cases that should
+never happen and handles expected failures with returned errors.

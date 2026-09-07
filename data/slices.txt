@@ -1,0 +1,25 @@
+Slices
+
+A slice is a flexible, growable view into the elements of an array. Arrays in Go have a
+fixed size that is part of their type, which makes them rigid, so most Go code uses slices
+instead. A slice does not store any data itself. It is a small descriptor, sometimes called
+the slice header, that holds three things: a pointer to an element in an underlying array,
+a length, and a capacity.
+
+The length is how many elements the slice currently contains, returned by len. The capacity
+is how many elements the underlying array has room for starting from the slice's first
+element, returned by cap. You can create a slice with a literal like "s := []int{1, 2, 3}",
+or with make, for example "s := make([]int, 0, 10)", which asks for a slice of length 0 and
+capacity 10.
+
+You grow a slice with append, for example "s = append(s, 4)". If the underlying array still
+has spare capacity, append writes into it and returns a slice with a longer length. If there
+is no room left, append allocates a new, larger array, copies the existing elements over, and
+returns a slice pointing at the new array. This is why append returns a slice and you must
+assign the result back: the slice header may have changed.
+
+Because a slice points into an underlying array, two slices can share the same backing array.
+Re-slicing with an expression like "s[1:3]" produces a new slice that views part of the same
+data, so modifying one can be visible through the other. When you need an independent copy,
+use the built-in copy function to copy elements into a separate slice. Understanding that a
+slice is a view, not the data itself, explains most surprising slice behavior.
