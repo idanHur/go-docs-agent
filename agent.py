@@ -2,6 +2,8 @@ from typing import TypedDict
 from openai import OpenAI
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
+from langgraph.graph import StateGraph, START, END
+
 
 load_dotenv()
 openai_client = OpenAI()
@@ -13,6 +15,7 @@ class State(TypedDict):
     chunks: list    
     answer: str     
     retries: int    # how many times we've rewritten and retried, to cap the loop
+    relevant: bool   # did the grade node judge the chunks relevant?
 
 
 
@@ -58,7 +61,82 @@ def answer(state: State) -> dict:
 
     return {"answer": completion.choices[0].message.content}
 
+def grade(state: State) -> dict:
+    question = state["question"]
+    chunks = state["chunks"]
+
+    context = "\n\n".join(c["text"] for c in chunks)
+
+    prompt = (
+        f"Question: {question}\n\n"
+        f"Retrieved text:\n{context}\n\n"
+        "Does the retrieved text contain information that answers the question? "
+        "Reply with only one word: yes or no."
+    )
+
+    completion = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role":'user', "content":prompt}
+        ]
+    )
+
+    verdict = completion.choices[0].message.content.strip().lower()
+    relevant = verdict.startswith("y")
+
+    return {"relevant": relevant}
 
 
-test_state = {"question": "How do goroutines work?", "chunks": [], "answer": "", "retries": 0}
-print(retrieve(test_state))
+def rewrite(state: State) -> dict:
+    question = state["question"]
+
+    prompt = (
+        f"A search of Go documentation for this question returned nothing useful: '{question}'. "
+        "Rewrite it as a clearer search query more likely to match Go documentation. "
+        "Reply with only the rewritten question."
+    )
+
+    completion = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role":"user", "content":prompt}
+        ]
+    )
+
+    new_question = completion.choices[0].message.content.strip()
+
+    # save new question AND bump the retry counter.
+    return {"question": new_question, "retries": state["retries"] + 1}
+
+
+def decide(state: State) -> str:
+    if state["relevant"]:
+        return "answer"          # chunks are good, go answer
+    if state["retries"] >= 2:
+        return "answer"          # tried enough, give up looping and answer anyway
+    return "rewrite"             # chunks weak and we still have tries left, rephrase
+
+
+builder = StateGraph(State)
+
+# Register the nodes function
+builder.add_node("retrieve", retrieve)
+builder.add_node("answer", answer)
+builder.add_node("grade", grade)
+builder.add_node("rewrite", rewrite)
+
+
+
+
+builder.add_edge(START, "retrieve")
+builder.add_edge("retrieve", "grade")  
+builder.add_conditional_edges("grade", decide, {"answer": "answer", "rewrite": "rewrite"})  
+builder.add_edge("rewrite", "retrieve")  
+
+builder.add_edge("answer", END)   
+
+graph = builder.compile()
+
+# Run it: hand it a starting state, get back the final state.
+result = graph.invoke({"question": "How do goroutines work?", "chunks": [], "answer": "", "retries": 0})
+print(result["answer"])
