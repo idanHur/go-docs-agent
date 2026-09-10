@@ -1,0 +1,23 @@
+Interfaces
+
+An interface is a type that lists a set of method signatures. It describes behavior, what a value can
+do, rather than what it is or what data it holds. For example, an interface with a single method
+"Read(p []byte) (int, error)" describes anything that can be read from.
+
+The distinctive thing about Go interfaces is that they are satisfied implicitly. A type does not
+declare "implements SomeInterface" anywhere. If a type has all the methods an interface lists, it
+automatically satisfies that interface. This lets you define an interface after the fact and have
+existing types fit it, which keeps code loosely coupled.
+
+An interface value holds two things under the hood: the concrete type stored in it, and the value
+itself. Because of this, a variable of an interface type can hold any concrete value whose type has
+the required methods, and you can swap implementations without changing the code that uses the
+interface.
+
+The empty interface, written interface{} or the built-in alias "any", lists no methods, so every
+type satisfies it. It is Go's way of holding a value of unknown type, used sparingly.
+
+To get the concrete value back out, you use a type assertion, "v, ok := x.(string)", which safely
+checks whether the interface value holds a string. When you need to handle several possible types,
+a type switch, "switch v := x.(type)", branches on the concrete type. Idiomatic Go favors small
+interfaces, often just one or two methods, because they are easy to satisfy and compose.

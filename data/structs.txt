@@ -1,0 +1,26 @@
+Structs
+
+A struct is a composite type that groups together a set of named fields into a single custom type.
+It is how you model a record or an object's data in Go. You define one with the type keyword, for
+example:
+
+    type User struct {
+        Name string
+        Age  int
+    }
+
+You create a value with a struct literal, either naming the fields, "u := User{Name: "Ada", Age: 36}",
+which is the clear and preferred form, or positionally, "u := User{"Ada", 36}". You read and set
+fields with a dot, "u.Name" and "u.Age = 37". The zero value of a struct has every field set to its
+own zero value, so a fresh User has an empty Name and an Age of 0, with no separate null concept.
+
+Go favors composition over inheritance, and structs support it through embedding. If you place a type
+inside a struct without a field name, its fields and methods are promoted and can be accessed directly
+on the outer struct, as if they belonged to it. This lets you build bigger types by combining smaller
+ones instead of using class inheritance.
+
+You attach behavior to a struct by defining methods on it. A method is a function with a receiver, for
+example "func (u User) Greeting() string". The receiver can be a value, which gets a copy of the
+struct, or a pointer, "func (u *User) SetAge(a int)", which lets the method modify the original. Use a
+pointer receiver when the method needs to change the struct or when the struct is large and you want
+to avoid copying it.

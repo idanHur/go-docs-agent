@@ -137,6 +137,9 @@ builder.add_edge("answer", END)
 
 graph = builder.compile()
 
-# Run it: hand it a starting state, get back the final state.
-result = graph.invoke({"question": "How do goroutines work?", "chunks": [], "answer": "", "retries": 0})
-print(result["answer"])
+def ask(question):
+    result = graph.invoke({"question": question, "chunks": [], "answer": "", "retries": 0})
+    return result["answer"]
+
+if __name__ == "__main__":
+    print(ask("How do goroutines work?"))

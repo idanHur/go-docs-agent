@@ -1,0 +1,23 @@
+Maps
+
+A map is Go's built-in key-value store, sometimes called a dictionary or hash table in other
+languages. It associates keys of one type with values of another, written as map[KeyType]ValueType,
+for example map[string]int to map names to counts.
+
+You create a map with make, for example "m := make(map[string]int)", or with a literal like
+"m := map[string]int{"a": 1, "b": 2}". You set a value with "m["c"] = 3" and read it with
+"v := m["key"]". The zero value of a map is nil, and a nil map can be read from but writing to it
+panics, so you must make a map before adding to it.
+
+Reading a missing key does not fail. It returns the value type's zero value, so a missing int key
+gives 0. That is ambiguous, because a real stored 0 looks the same as a missing key. To tell them
+apart, Go has the "comma ok" idiom: "v, ok := m["key"]". Here ok is a boolean that is true only if
+the key was actually present. This is the standard way to check for existence.
+
+You remove an entry with the built-in delete, for example "delete(m, "key")". You get the number of
+entries with len(m).
+
+You loop over a map with range, for example "for key, value := range m". One important detail: the
+iteration order of a map is deliberately randomized and is different on each run. If you need a
+stable order, collect the keys into a slice and sort it. Finally, a key type must be comparable with
+==, so you can use strings, numbers, or structs of comparable fields as keys, but not slices.

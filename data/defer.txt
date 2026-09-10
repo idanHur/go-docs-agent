@@ -1,0 +1,21 @@
+Defer
+
+The defer statement schedules a function call to run when the surrounding function returns, no matter
+how it returns, whether normally or through an error path. You write "defer f()" and f runs at the end.
+Its main use is cleanup that should always happen: closing a file, unlocking a mutex, closing a network
+connection. Putting the cleanup right next to the thing you opened, with defer, means you cannot forget
+it later.
+
+A classic example is "f, err := os.Open(name)" followed immediately by "defer f.Close()". The file is
+guaranteed to close when the function exits, even if later code returns early because of an error.
+
+Two details matter. First, if a function has several defers, they run in last in, first out order: the
+most recently deferred call runs first. This is convenient when you acquire resources in order and want
+to release them in reverse. Second, the arguments to a deferred call are evaluated at the moment defer
+runs, not when the deferred call finally executes, so the values are captured up front even though the
+call happens later.
+
+Defer also works together with panic and recover. When a function panics, its deferred calls still run
+as the stack unwinds, and a deferred function can call recover to stop the panic and regain control.
+That combination is how Go does guaranteed cleanup and controlled recovery, and it is why cleanup logic
+belongs in a defer rather than being repeated before every return.

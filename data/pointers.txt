@@ -1,0 +1,22 @@
+Pointers
+
+A pointer is a value that holds the memory address of another value, rather than the data itself. If
+you have a variable x, then &x is a pointer to it, "the address of x," and its type is *int if x is an
+int. Given a pointer p, the expression *p is "the value stored at that address," which is called
+dereferencing.
+
+Pointers matter because Go passes arguments by value: a function receives a copy of what you pass, so
+changes it makes do not affect the caller's original. If you want a function to modify the caller's
+value, you pass a pointer to it, and the function writes through the pointer with *p = newValue. So
+"func increment(n *int)" can change the caller's number, while "func increment(n int)" cannot.
+
+Pointers are also used to avoid copying large values. Passing a pointer to a big struct copies only
+the small address, not the whole struct, which can be more efficient.
+
+The zero value of a pointer is nil, meaning it points at nothing. Dereferencing a nil pointer panics,
+so code that might hold a nil pointer should check for it. Unlike C, Go has no pointer arithmetic: you
+cannot add to or subtract from a pointer to walk through memory, which removes a whole class of bugs.
+
+This is why methods often use pointer receivers: a method with "func (u *User) SetName(n string)"
+receives a pointer to the original struct and can change it, whereas a value receiver would only edit
+a copy.
