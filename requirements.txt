@@ -1,0 +1,6 @@
+qdrant-client
+openai
+python-dotenv
+langgraph
+streamlit
+tavily-python

@@ -3,11 +3,13 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from langgraph.graph import StateGraph, START, END
-
+import os
+from tavily import TavilyClient
 
 load_dotenv()
 openai_client = OpenAI()
 qdrant = QdrantClient(url="http://localhost:6333")
+tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
 # The shared "clipboard" that flows through the model.
 class State(TypedDict):
@@ -16,6 +18,7 @@ class State(TypedDict):
     answer: str     
     retries: int    # how many times we've rewritten and retried, to cap the loop
     relevant: bool   # did the grade node judge the chunks relevant?
+    web_examples: str
 
 
 
@@ -117,6 +120,21 @@ def decide(state: State) -> str:
     return "rewrite"             # chunks weak and we still have tries left, rephrase
 
 
+def web_examples(state: State) -> dict:
+    question = state["question"]
+
+    # Ask Tavily for a few web results about this Go question.
+    response = tavily.search(query=f"Go programming: {question}", max_results=3)
+
+    lines = []
+    for item in response["results"]:
+        snippet = item["content"][:150].strip()
+        lines.append(f"- [{item['title']}]({item['url']})\n  {snippet}...")
+
+    web = "\n\n".join(lines) if lines else "No web examples found."
+    return {"web_examples": web}
+
+
 builder = StateGraph(State)
 
 # Register the nodes function
@@ -124,6 +142,7 @@ builder.add_node("retrieve", retrieve)
 builder.add_node("answer", answer)
 builder.add_node("grade", grade)
 builder.add_node("rewrite", rewrite)
+builder.add_node("web_examples", web_examples)
 
 
 
@@ -133,13 +152,19 @@ builder.add_edge("retrieve", "grade")
 builder.add_conditional_edges("grade", decide, {"answer": "answer", "rewrite": "rewrite"})  
 builder.add_edge("rewrite", "retrieve")  
 
-builder.add_edge("answer", END)   
+builder.add_edge("answer", "web_examples")  
+builder.add_edge("web_examples", END)   
 
 graph = builder.compile()
 
+def ask_full(question):
+    return graph.invoke({"question": question, "chunks": [], "answer": "", "retries": 0, "web_examples": ""})
+
 def ask(question):
-    result = graph.invoke({"question": question, "chunks": [], "answer": "", "retries": 0})
-    return result["answer"]
+    return ask_full(question)["answer"]
 
 if __name__ == "__main__":
-    print(ask("How do goroutines work?"))
+    result = ask_full("How do goroutines work?")
+    print(result["answer"])
+    print("\n--- Examples from the web ---")
+    print(result["web_examples"])
